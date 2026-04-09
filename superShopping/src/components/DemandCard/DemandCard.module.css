@@ -1,0 +1,75 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  background: var(--color-background-primary);
+  border-radius: var(--border-radius-lg);
+  padding: 16px;
+}
+
+.infoContainer {
+  display: flex;
+  flex-direction: column;
+}
+
+.cardTitle {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  margin-bottom: 12px;
+}
+
+.headerRow {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.metricLabel {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  margin-bottom: 4px;
+}
+
+.metricValue {
+  font-size: 28px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+}
+
+.barWrap {
+  position: relative;
+  height: 14px;
+  background: var(--color-background-secondary);
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.barFill {
+  height: 100%;
+  border-radius: 99px;
+  transition: width 0.4s ease, background 0.4s ease;
+}
+
+.rangeRow {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  margin-top: 4px;
+}
+
+.chartSection {
+  margin-top: 14px;
+}
+
+.chartLabel {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  margin-bottom: 6px;
+}
+
+.chartWrap {
+  position: relative;
+  height: 64px;
+}

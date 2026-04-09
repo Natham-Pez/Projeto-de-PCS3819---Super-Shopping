@@ -1,0 +1,62 @@
+:root {
+  --font-sans: "Inter", "Segoe UI", Arial, sans-serif;
+
+  --color-background-primary: #ececec;
+  --color-background-secondary: #c4ccfa;
+  --color-background-badge: #152a42;
+
+  --color-text-primary: #031853;
+  --color-text-secondary: #2266b3;
+  --color-text-tertiary: #2266b3;
+
+  /* Status — Success */
+  --color-background-success: rgba(29, 158, 117, 0.15);
+  --color-text-success: #1d9e75;
+
+  /* Status — Warning */
+  --color-background-warning: rgba(186, 117, 23, 0.15);
+  --color-text-warning: #ba7517;
+
+  /* Status — Danger */
+  --color-background-danger: rgba(226, 75, 74, 0.15);
+  --color-text-danger: #e24b4a;
+
+  /* Status — Info */
+  --color-background-info: rgba(55, 138, 221, 0.15);
+  --color-text-info: #378add;
+
+  /* Border Radius */
+  --border-radius-lg: 14px;
+  --border-radius-md: 10px;
+}
+
+/* ─── Reset ──────────────────────────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* ─── Base ───────────────────────────────────────────────────────────────────── */
+body {
+  background: #cecdcd;
+  font-family: var(--font-sans);
+  color: var(--color-text-primary);
+  padding: 20px;
+}
+
+canvas {
+  background: transparent;
+}
+
+/* ─── Scrollbar ──────────────────────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #444;
+  border-radius: 10px;
+}

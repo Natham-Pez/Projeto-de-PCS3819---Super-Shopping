@@ -1,0 +1,49 @@
+.mcard {
+  background: var(--color-background-primary);
+  border-radius: var(--border-radius-md);
+  padding: 14px 16px;
+}
+
+.label {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  border-color: var(--color-border-tertiary);
+  margin-bottom: 6px;
+  letter-spacing: 0.01em;
+}
+
+.value {
+  font-size: 22px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+}
+
+.barSection {
+  margin-top: 8px;
+}
+
+.barWrap {
+  position: relative;
+  height: 10px;
+  background: var(--color-background-primary);
+  border-radius: 99px;
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+
+.barFill {
+  height: 100%;
+  border-radius: 99px;
+  transition: width 0.4s ease, background 0.4s ease;
+}
+
+.rangeRow {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--color-text-secondary);
+}
+
+.badgeRow {
+  margin-top: 8px;
+}
