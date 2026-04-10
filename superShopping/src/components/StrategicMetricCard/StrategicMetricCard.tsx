@@ -11,11 +11,13 @@ interface EnergyIntensityCardProps {
 export function EnergyIntensityCard({ metric }: EnergyIntensityCardProps) {
   return (
     <div className={styles.mcard}>
-      <div className={styles.label}>{metric.label}</div>
-      <div className={styles.value}>{metric.value}</div>
-      <div className={styles.sub}>{metric.sub}</div>
-      <div className={styles.badgeRow}>
-        <Badge variant={metric.badgeVariant}>{metric.badgeText}</Badge>
+      <div className={styles.infoContainer}>
+        <div className={styles.label}>{metric.label}</div>
+        <div className={styles.value}>{metric.value}</div>
+        <div className={styles.sub}>{metric.sub}</div>
+        <div className={styles.badgeRow}>
+          <Badge variant={metric.badgeVariant}>{metric.badgeText}</Badge>
+        </div>
       </div>
     </div>
   );
@@ -30,18 +32,20 @@ interface InvoiceForecastCardProps {
 export function InvoiceForecastCard({ metric }: InvoiceForecastCardProps) {
   return (
     <div className={styles.mcard}>
-      <div className={styles.label}>{metric.label}</div>
-      <div className={styles.value}>{metric.value}</div>
-      <div className={styles.sub}>{metric.sub}</div>
-      <div className={styles.projBar}>
-        <div style={{ width: `${metric.realizedPct}%`, background: '#378ADD' }} />
-        <div style={{ width: `${metric.projectedPct}%`, background: '#85B7EB' }} />
-        <div style={{ width: `${metric.marginPct}%`, background: '#B5D4F4' }} />
-      </div>
-      <div className={styles.projLabels}>
-        <span>Realizado {metric.realizedPct}%</span>
-        <span>Projetado {metric.projectedPct}%</span>
-        <span>Margem {metric.marginPct}%</span>
+      <div className={styles.infoContainer}>
+        <div className={styles.label}>{metric.label}</div>
+        <div className={styles.value}>{metric.value}</div>
+        <div className={styles.sub}>{metric.sub}</div>
+        <div className={styles.projBar}>
+          <div style={{ width: `${metric.realizedPct}%`, background: '#378ADD' }} />
+          <div style={{ width: `${metric.projectedPct}%`, background: '#85B7EB' }} />
+          <div style={{ width: `${metric.marginPct}%`, background: '#B5D4F4' }} />
+        </div>
+        <div className={styles.projLabels}>
+          <span>Realizado {metric.realizedPct}%</span>
+          <span>Projetado {metric.projectedPct}%</span>
+          <span>Margem {metric.marginPct}%</span>
+        </div>
       </div>
     </div>
   );
