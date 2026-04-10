@@ -1,0 +1,43 @@
+.card {
+  background: var(--color-background-primary);
+  border: 0.5px solid var(--color-border-tertiary);
+  border-radius: var(--border-radius-lg);
+  padding: 16px;
+}
+
+.cardTitle {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  margin-bottom: 12px;
+}
+
+.chartWrap {
+  position: relative;
+  height: 150px;
+}
+
+.summary {
+  margin-top: 14px;
+}
+
+.divRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  border-bottom: 0.5px solid var(--color-border-tertiary);
+  font-size: 13px;
+}
+
+.divRow:last-child {
+  border-bottom: none;
+}
+
+.rowLabel {
+  color: var(--color-text-secondary);
+}
+
+.rowValue {
+  font-weight: 500;
+}

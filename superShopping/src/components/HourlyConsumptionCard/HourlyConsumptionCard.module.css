@@ -1,0 +1,101 @@
+.card {
+  background: var(--color-background-primary);
+  border: 0.5px solid var(--color-border-tertiary);
+  border-radius: var(--border-radius-lg);
+  padding: 16px;
+}
+
+.cardTitle {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  margin-bottom: 12px;
+}
+
+.summaryRow {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.summaryCard {
+  flex: 1;
+  background: var(--color-background-secondary);
+  border-radius: var(--border-radius-md);
+  padding: 10px 12px;
+}
+
+.summaryLabel {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  margin-bottom: 3px;
+}
+
+.summaryValue {
+  font-size: 18px;
+  font-weight: 500;
+}
+
+.summaryPct {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  margin-top: 2px;
+}
+
+.sectionTitle {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  margin-bottom: 8px;
+}
+
+.divRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  border-bottom: 0.5px solid var(--color-border-tertiary);
+  font-size: 13px;
+}
+
+.divRow:last-of-type {
+  border-bottom: none;
+}
+
+.rowLabel {
+  color: var(--color-text-secondary);
+}
+
+.rowValue {
+  font-weight: 500;
+}
+
+.proportionSection {
+  margin-top: 12px;
+}
+
+.proportionLabel {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  margin-bottom: 4px;
+}
+
+.segWrap {
+  height: 16px;
+  border-radius: 99px;
+  overflow: hidden;
+  display: flex;
+  margin-bottom: 4px;
+}
+
+.seg {
+  height: 100%;
+  transition: width 0.4s ease;
+}
+
+.segLabels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: var(--color-text-secondary);
+}

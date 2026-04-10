@@ -1,0 +1,196 @@
+import type {
+  HourlyConsumption,
+  InvoicePrediction,
+  LoadCurvePoint,
+  LoadCurveStats,
+  PowerFactorFinancial,
+  PowerFactorMetric,
+  EnergyIntensityMetric,
+  InvoiceForecastMetric,
+  StrategicDashboardState,
+} from '../types/strategic';
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+const BR = (n: number) => n.toLocaleString('pt-BR');
+
+const BASE_LOAD = [38, 35, 42, 55, 90, 140, 192, 185, 170, 196, 188, 160];
+const LOAD_HOURS = ['00h', '02h', '04h', '06h', '08h', '10h', '12h', '14h', '16h', '18h', '20h', '22h'];
+const FP_MONTHS = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun'];
+const FP_AVOIDED = [820, 960, 1040, 880, 1120, 1000];
+const FP_FINES = [0, 120, 0, 220, 0, 0];
+
+// ─── Builders ─────────────────────────────────────────────────────────────────
+
+function buildEnergyIntensity(occ: number, kwh: number): EnergyIntensityMetric {
+  const ie = kwh / occ;
+  const iePrev = (kwh * 1.06) / occ;
+  const delta = Math.round((1 - ie / iePrev) * 100);
+  return {
+    label: 'Intensidade energética',
+    value: ie.toFixed(2).replace('.', ',') + ' kWh/pessoa',
+    sub: `hoje · ${occ} pessoas · ${kwh} kWh`,
+    badgeVariant: 'ok',
+    badgeText: `▼ ${delta}% vs. semana passada`,
+    occupancy: occ,
+    kwh,
+  };
+}
+
+function buildInvoiceForecast(fatura: number): InvoiceForecastMetric {
+  return {
+    label: 'Previsão de fatura',
+    value: 'R$ ' + BR(fatura),
+    sub: 'estimativa para fechamento em 12 dias',
+    badgeVariant: 'ok',
+    badgeText: '',
+    realizedPct: 62,
+    projectedPct: 24,
+    marginPct: 14,
+  };
+}
+
+function buildPowerFactor(fp: number, evit: number, multa: number): PowerFactorMetric {
+  const fpOk = fp >= 0.92;
+  return {
+    label: 'Impacto FP — mês atual',
+    value: fpOk
+      ? `+R$ ${BR(evit)} evitados`
+      : `−R$ ${BR(multa)} em multas`,
+    sub: `FP médio: ${fp.toFixed(2).replace('.', ',')} · meta ≥ 0,92`,
+    badgeVariant: fpOk ? 'ok' : 'danger',
+    badgeText: fpOk ? '✓ sem multas no mês' : '✗ multa acumulada',
+    avgFp: fp,
+    fpOk,
+  };
+}
+
+function buildLoadCurve(data: number[]): { curve: LoadCurvePoint[]; stats: LoadCurveStats } {
+  const curve: LoadCurvePoint[] = LOAD_HOURS.map((hour, i) => ({ hour, value: data[i] }));
+  return {
+    curve,
+    stats: {
+      peak: Math.max(...data),
+      avg: Math.round(data.reduce((a, b) => a + b, 0) / data.length),
+      min: Math.min(...data),
+    },
+  };
+}
+
+function buildHourlyConsumption(kwh: number): HourlyConsumption {
+  const ponta = Math.round(kwh * 0.32);
+  const fora = kwh - ponta;
+  return {
+    peak: ponta,
+    offPeak: fora,
+    peakPct: Math.round((ponta / kwh) * 100),
+    offPeakPct: Math.round((fora / kwh) * 100),
+    activePeak: Math.round(ponta * 0.96),
+    reactivePeak: Math.round(ponta * 0.04 * 10),
+    activeOffPeak: Math.round(fora * 0.97),
+    reactiveOffPeak: Math.round(fora * 0.03 * 10),
+  };
+}
+
+function buildPowerFactorFinancial(
+  avoidedHistory: number[],
+  finesHistory: number[],
+): PowerFactorFinancial {
+  const avoided = avoidedHistory.reduce((a, b) => a + b, 0);
+  const fines = finesHistory.reduce((a, b) => a + b, 0);
+  return {
+    fines,
+    avoided,
+    balance: avoided - fines,
+    months: FP_MONTHS,
+    avoidedHistory,
+    finesHistory,
+  };
+}
+
+function buildInvoicePrediction(realKwh: number, projKwh: number): InvoicePrediction {
+  const days = Array.from({ length: 30 }, (_, i) => String(i + 1));
+  const realPoints = Array.from({ length: 18 }, (_, i) =>
+    Math.round(520 + i * 42 + Math.random() * 40),
+  );
+  const projPoints = Array.from({ length: 12 }, (_, i) =>
+    Math.round(realPoints[17] + (i + 1) * 38),
+  );
+
+  const realData: (number | null)[] = [...realPoints, ...Array(12).fill(null)];
+  const projData: (number | null)[] = [
+    ...Array(17).fill(null),
+    realPoints[17],
+    ...projPoints,
+  ];
+
+  return {
+    realized: realKwh,
+    projected: projKwh,
+    estimated: Math.round(projKwh * 1.01),
+    deltaVsPrev: Math.round(400 + Math.random() * 600),
+    confidence: 87,
+    realizedData: realData,
+    projectedData: projData,
+    dayLabels: days,
+  };
+}
+
+// ─── Initial State ────────────────────────────────────────────────────────────
+
+export function buildStrategicInitialState(): StrategicDashboardState {
+  const occ = 312;
+  const kwh = 574;
+  const fp = 0.94;
+  const evit = 1120;
+  const multa = 0;
+  const loadData = BASE_LOAD;
+  const realKwh = 11240;
+  const projKwh = 18100;
+  const { curve, stats } = buildLoadCurve(loadData);
+
+  return {
+    energyIntensity: buildEnergyIntensity(occ, kwh),
+    invoiceForecast: buildInvoiceForecast(18240),
+    powerFactorImpact: buildPowerFactor(fp, evit, multa),
+    loadCurve: curve,
+    loadStats: stats,
+    hourlyConsumption: buildHourlyConsumption(kwh),
+    powerFactorFinancial: buildPowerFactorFinancial(FP_AVOIDED, FP_FINES),
+    invoicePrediction: buildInvoicePrediction(realKwh, projKwh),
+    lastUpdate: new Date(),
+  };
+}
+
+// ─── Simulate Refresh ─────────────────────────────────────────────────────────
+
+export function simulateStrategicRefresh(
+  prev: StrategicDashboardState,
+): StrategicDashboardState {
+  const occ = Math.round(280 + Math.random() * 80);
+  const kwh = Math.round(500 + Math.random() * 150);
+  const fp = 0.89 + Math.random() * 0.11;
+  const fpOk = fp >= 0.92;
+  const evit = fpOk ? Math.round(900 + Math.random() * 400) : 0;
+  const multa = fpOk ? 0 : Math.round(200 + Math.random() * 600);
+  const loadData = BASE_LOAD.map((v) => Math.round(v * (0.88 + Math.random() * 0.24)));
+  const realKwh = Math.round(10000 + Math.random() * 2500);
+  const projKwh = Math.round(realKwh * 1.6 + Math.random() * 1000);
+  const fatura = Math.round(projKwh * 1.01);
+
+  const newAvoided = [...prev.powerFactorFinancial.avoidedHistory.slice(1), evit || Math.round(800 + Math.random() * 400)];
+  const newFines = [...prev.powerFactorFinancial.finesHistory.slice(1), multa];
+  const { curve, stats } = buildLoadCurve(loadData);
+
+  return {
+    energyIntensity: buildEnergyIntensity(occ, kwh),
+    invoiceForecast: buildInvoiceForecast(fatura),
+    powerFactorImpact: buildPowerFactor(fp, evit, multa),
+    loadCurve: curve,
+    loadStats: stats,
+    hourlyConsumption: buildHourlyConsumption(kwh),
+    powerFactorFinancial: buildPowerFactorFinancial(newAvoided, newFines),
+    invoicePrediction: buildInvoicePrediction(realKwh, projKwh),
+    lastUpdate: new Date(),
+  };
+}
