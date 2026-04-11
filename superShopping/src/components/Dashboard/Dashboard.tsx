@@ -7,6 +7,11 @@ import styles from './Dashboard.module.css';
 
 export function Dashboard() {
   const { state, refresh } = useDashboard();
+
+  if (!state) {
+    return <div className={styles.loading}>Carregando dados do dashboard...</div>;
+  }
+
   const { temperature, occupancy, powerFactor, demand, history, equipments, lastUpdate } = state;
 
   const formattedTime = lastUpdate.toLocaleTimeString('pt-BR');

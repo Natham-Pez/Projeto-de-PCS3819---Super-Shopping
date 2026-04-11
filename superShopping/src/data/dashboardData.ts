@@ -58,29 +58,97 @@ function buildOccupancy(occ: number): MetricBarItem {
     badgeText: isOk ? '✓ abaixo da capacidade' : '⚠ alta ocupação',
   };
 }
+async function buildPowerFactor(): Promise<MetricBarItem> {
+  const now = new Date();
+  const fiveSecondsAgo = new Date(now.getTime() - (10 * 1000));
 
-function buildPowerFactor(fp: number): MetricBarItem {
-  const isOk = fp >= 0.92;
-  return {
-    label: 'Fator de potência',
-    value: fp,
-    displayValue: fp.toFixed(2).replace('.', ','),
-    barPercent: Math.round(fp * 100),
-    barColor: isOk ? '#1D9E75' : '#E24B4A',
-    rangeMin: '0,0',
-    rangeMax: '1,0',
-    rangeLabel: 'Mínimo: 0,92',
-    badgeVariant: isOk ? 'ok' : 'danger',
-    badgeText: isOk ? '✓ acima de 0,92' : '✗ abaixo do mínimo — risco de multa',
-  };
+  const offset = now.getTimezoneOffset() * 60000;
+  const to_time = new Date(now.getTime() - offset).toISOString().split('.')[0];
+  const from_time = new Date(fiveSecondsAgo.getTime() - offset).toISOString().split('.')[0];
+  const channel = 'lab'
+
+  const url = `/analytics/${channel}/electrical_health?&from_time=${from_time}&to_time=${to_time}`;
+
+  try {
+    const response = await fetch(url);
+    const data = await response.json();
+    const results = data.results || [];
+    console.log(results)
+    const fpRaw = results.length > 0 
+      ? Math.min(...results.map((res: any) => res.avg_power_factor || 0))
+      : 0;
+    const fp = parseFloat(fpRaw.toFixed(2));
+
+    const isOk = fp >= 0.92;
+
+    return {
+      label: 'Fator de potência',
+      value: fp,
+      displayValue: fp.toFixed(2).replace('.', ','),
+      barPercent: Math.round(fp * 100),
+      barColor: isOk ? '#1D9E75' : '#E24B4A',
+      rangeMin: '0,0',
+      rangeMax: '1,0',
+      rangeLabel: 'Mínimo: 0,92',
+      badgeVariant: isOk ? 'ok' : 'danger',
+      badgeText: isOk ? '✓ acima de 0,92' : '✗ abaixo do mínimo — risco de multa',
+    };
+  } catch (error) {
+    console.error("Erro ao buscar fator de potência:", error);
+    return {
+      label: 'Fator de potência',
+      value: 0,
+      displayValue: '0',
+      barPercent: 0,
+      barColor: '#E24B4A',
+      rangeMin: '0,0',
+      rangeMax: '1,0',
+      rangeLabel: 'Mínimo: 0,92',
+      badgeVariant: 'danger',
+      badgeText: '✗ abaixo do mínimo — risco de multa',
+    };
+  }
 }
 
-function buildDemand(dem: number, prev: DemandData): DemandData {
-  const limit = 200;
-  const percent = Math.round((dem / limit) * 100);
-  const labels = [...prev.labels.slice(1), formatTime(new Date())];
-  const history = [...prev.history.slice(1), dem];
-  return { value: dem, limit, percent, labels, history };
+async function buildDemand(prev: DemandData): Promise<DemandData> {
+  const now = new Date();
+  const thirtyMinutesAgo = new Date(now.getTime() - (30 * 60 * 1000));
+
+  const offset = now.getTimezoneOffset() * 60000;
+  const from_time = new Date(thirtyMinutesAgo.getTime() - offset).toISOString().split('.')[0];
+  const channel = 'lab';
+
+  const url = `/${channel}?&from_time=${from_time}`;
+
+  try {
+    const response = await fetch(url);
+    const data = await response.json();
+    const measurements = data.measurements || [];
+
+    const demRaw = measurements.slice(0, 3).reduce((sum: number, m: any) => sum + (m.active_power || 0), 0);
+    const dem = parseFloat(demRaw.toFixed(2));
+
+    // Agrupa por HH:mm para bater com as labels existentes
+    const groups: Record<string, number> = {};
+    measurements.forEach((m: any) => {
+      const d = new Date(m.timestamp);
+      const t = formatTime(d);
+      groups[t] = (groups[t] || 0) + (m.active_power || 0);
+    });
+
+    const history = prev.labels.map(label => parseFloat((groups[label] || 0).toFixed(2)));
+    
+    const limit = 200;
+    const percent = Math.round((dem / limit) * 100);
+
+    return { value: dem, limit, percent, labels: prev.labels, history };
+  } catch (error) {
+    console.error("Erro ao buscar demanda:", error);
+    return {
+      ...prev,
+      history: [...prev.history.slice(1), prev.value]
+    };
+  }
 }
 
 function buildHistory(temp: number, occ: number, prev: HistoryData): HistoryData {
@@ -112,21 +180,23 @@ const INITIAL_EQUIPMENTS: Equipment[] = [
   { id: 'ac1', name: 'Ar-condicionado — Sala A', status: 'alert', statusLabel: 'alerta', timeLabel: 'ciclos anômalos' },
 ];
 
-export function buildInitialState(): DashboardState {
+export async function buildInitialState(): Promise<DashboardState> {
   const demLabels = generateTimeLabels(12, 150_000);
   const histLabels = generateTimeLabels(13, 300_000);
+
+  const initialDemand: DemandData = {
+    value: 0,
+    limit: 200,
+    percent: 0,
+    labels: demLabels,
+    history: Array(12).fill(0),
+  };
 
   return {
     temperature: buildTemperature(23.4),
     occupancy: buildOccupancy(47),
-    powerFactor: buildPowerFactor(0.94),
-    demand: {
-      value: 182,
-      limit: 200,
-      percent: 91,
-      labels: demLabels,
-      history: [155, 162, 170, 168, 174, 178, 180, 183, 185, 181, 184, 182],
-    },
+    powerFactor: await buildPowerFactor(),
+    demand: await buildDemand(initialDemand),
     history: {
       labels: histLabels,
       temperature: [21.8, 22.1, 22.4, 22.9, 23.1, 23.3, 23.5, 23.8, 23.6, 23.4, 23.2, 23.4, 23.4],
@@ -139,17 +209,15 @@ export function buildInitialState(): DashboardState {
 
 // ─── Simulate Update ──────────────────────────────────────────────────────────
 
-export function simulateRefresh(prev: DashboardState): DashboardState {
+export async function simulateRefresh(prev: DashboardState): Promise<DashboardState> {
   const temp = 22 + Math.random() * 4;
   const occ = Math.round(30 + Math.random() * 40);
-  const fp = 0.88 + Math.random() * 0.12;
-  const dem = Math.round(140 + Math.random() * 70);
 
   return {
     temperature: buildTemperature(temp),
     occupancy: buildOccupancy(occ),
-    powerFactor: buildPowerFactor(fp),
-    demand: buildDemand(dem, prev.demand),
+    powerFactor: await buildPowerFactor(),
+    demand: await buildDemand(prev.demand),
     history: buildHistory(temp, occ, prev.history),
     equipments: prev.equipments,
     lastUpdate: new Date(),
