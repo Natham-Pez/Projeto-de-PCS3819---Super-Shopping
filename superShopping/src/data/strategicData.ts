@@ -22,14 +22,37 @@ const FP_FINES = [0, 120, 0, 220, 0, 0];
 
 // ─── Builders ─────────────────────────────────────────────────────────────────
 
-function buildEnergyIntensity(occ: number, kwh: number): EnergyIntensityMetric {
+async function buildEnergyIntensity(occ: number): Promise<EnergyIntensityMetric> {
+  const now = new Date();
+  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  
+  const offset = now.getTimezoneOffset() * 60000;
+  const to_time = new Date(now.getTime() - offset).toISOString().split('.')[0];
+  const from_time = new Date(startOfDay.getTime() - offset).toISOString().split('.')[0];
+  
+  const channel = 'lab';
+  const url = `/analytics/${channel}/consumption?&from_time=${from_time}&to_time=${to_time}`;
+
+  let kwh = 574;
+  try {
+    const response = await fetch(url);
+    const data = await response.json();
+    
+    const results = data.results || [];
+    if (results.length > 0) {
+      kwh = results.reduce((sum: number, res: any) => sum + (res.total_kwh || 0), 0);
+    }
+  } catch (error) {
+    console.error("Erro ao buscar consumo para intensidade energética:", error);
+  }
+
   const ie = kwh / occ;
   const iePrev = (kwh * 1.06) / occ;
   const delta = Math.round((1 - ie / iePrev) * 100);
   return {
     label: 'Intensidade energética',
     value: ie.toFixed(2).replace('.', ',') + ' kWh/pessoa',
-    sub: `hoje · ${occ} pessoas · ${kwh} kWh`,
+    sub: `hoje · ${occ} pessoas · ${kwh.toFixed(1).replace('.', ',')} kWh`,
     badgeVariant: 'ok',
     badgeText: `▼ ${delta}% vs. semana passada`,
     occupancy: occ,
@@ -50,7 +73,30 @@ function buildInvoiceForecast(fatura: number): InvoiceForecastMetric {
   };
 }
 
-function buildPowerFactor(fp: number, evit: number, multa: number): PowerFactorMetric {
+async function fetchCurrentFP(): Promise<number> {
+  const now = new Date();
+  const tenSecondsAgo = new Date(now.getTime() - (10 * 1000));
+  const offset = now.getTimezoneOffset() * 60000;
+  const to_time = new Date(now.getTime() - offset).toISOString().split('.')[0];
+  const from_time = new Date(tenSecondsAgo.getTime() - offset).toISOString().split('.')[0];
+  const channel = 'lab';
+  const url = `/analytics/${channel}/electrical_health?&from_time=${from_time}&to_time=${to_time}`;
+
+  try {
+    const response = await fetch(url);
+    const data = await response.json();
+    const results = data.results || [];
+    if (results.length > 0) {
+      const fpRaw = results.reduce((sum: number, res: any) => sum + (res.avg_power_factor || 0), 0) / results.length;
+      return parseFloat(fpRaw.toFixed(2));
+    }
+  } catch (error) {
+    console.error("Erro ao buscar FP da API:", error);
+  }
+  return 0.94; // Fallback
+}
+
+async function buildPowerFactor(fp: number, evit: number, multa: number): Promise<PowerFactorMetric> {
   const fpOk = fp >= 0.92;
   return {
     label: 'Impacto FP — mês atual',
@@ -65,16 +111,68 @@ function buildPowerFactor(fp: number, evit: number, multa: number): PowerFactorM
   };
 }
 
-function buildLoadCurve(data: number[]): { curve: LoadCurvePoint[]; stats: LoadCurveStats } {
-  const curve: LoadCurvePoint[] = LOAD_HOURS.map((hour, i) => ({ hour, value: data[i] }));
-  return {
-    curve,
-    stats: {
-      peak: Math.max(...data),
-      avg: Math.round(data.reduce((a, b) => a + b, 0) / data.length),
-      min: Math.min(...data),
-    },
-  };
+async function buildLoadCurve(): Promise<{ curve: LoadCurvePoint[]; stats: LoadCurveStats }> {
+  const now = new Date();
+  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  
+  const offset = now.getTimezoneOffset() * 60000;
+  const to_time = new Date(now.getTime() - offset).toISOString().split('.')[0];
+  const from_time = new Date(startOfDay.getTime() - offset).toISOString().split('.')[0];
+  
+  const channel = 'lab';
+  const url = `/${channel}?&from_time=${from_time}&to_time=${to_time}`;
+  console.log('http://143.107.102.8:8090' + url);
+
+  try {
+    const response = await fetch(url);
+    const data = await response.json();
+    const measurements = data.measurements || [];
+
+    // Agrupa medições por timestamp e soma a potência ativa das fases
+    const momentSums: Record<string, number> = {};
+    measurements.forEach((m: any) => {
+      const t = m.timestamp;
+      momentSums[t] = (momentSums[t] || 0) + (m.active_power || 0);
+    });
+
+    const values = Object.values(momentSums);
+    const peak = values.length > 0 ? Math.max(...values) : 0;
+    const avg = values.length > 0 ? values.reduce((a, b) => a + b, 0) / values.length : 0;
+    const min = values.length > 0 ? Math.min(...values) : 0;
+
+    // Mapeia os dados para os 12 buckets de 2 horas (00h, 02h... 22h)
+    const buckets: number[] = Array(12).fill(0);
+    const counts: number[] = Array(12).fill(0);
+
+    Object.entries(momentSums).forEach(([ts, val]) => {
+      const hour = new Date(ts).getHours();
+      const bucketIdx = Math.floor(hour / 2);
+      if (bucketIdx >= 0 && bucketIdx < 12) {
+        buckets[bucketIdx] += val;
+        counts[bucketIdx]++;
+      }
+    });
+
+    const curve: LoadCurvePoint[] = LOAD_HOURS.map((hour, i) => ({
+      hour,
+      value: counts[i] > 0 ? parseFloat((buckets[i] / counts[i]).toFixed(1)) : 0,
+    }));
+
+    return {
+      curve,
+      stats: {
+        peak: Math.round(peak),
+        avg: Math.round(avg),
+        min: Math.round(min),
+      },
+    };
+  } catch (error) {
+    console.error("Erro ao buscar curva de carga:", error);
+    return {
+      curve: LOAD_HOURS.map(hour => ({ hour, value: 0 })),
+      stats: { peak: 0, avg: 0, min: 0 },
+    };
+  }
 }
 
 function buildHourlyConsumption(kwh: number): HourlyConsumption {
@@ -138,23 +236,28 @@ function buildInvoicePrediction(realKwh: number, projKwh: number): InvoicePredic
 
 // ─── Initial State ────────────────────────────────────────────────────────────
 
-export function buildStrategicInitialState(): StrategicDashboardState {
+export async function buildStrategicInitialState(): Promise<StrategicDashboardState> {
   const occ = 312;
-  const kwh = 574;
-  const fp = 0.94;
-  const evit = 1120;
-  const multa = 0;
-  const loadData = BASE_LOAD;
   const realKwh = 11240;
   const projKwh = 18100;
-  const { curve, stats } = buildLoadCurve(loadData);
+  
+  const [energyIntensity, fp, loadCurveData] = await Promise.all([
+    buildEnergyIntensity(occ),
+    fetchCurrentFP(),
+    buildLoadCurve()
+  ]);
+  
+  const kwh = energyIntensity.kwh;
+  const fpOk = fp >= 0.92;
+  const evit = fpOk ? 1120 : 0;
+  const multa = fpOk ? 0 : 450;
 
   return {
-    energyIntensity: buildEnergyIntensity(occ, kwh),
+    energyIntensity,
     invoiceForecast: buildInvoiceForecast(18240),
-    powerFactorImpact: buildPowerFactor(fp, evit, multa),
-    loadCurve: curve,
-    loadStats: stats,
+    powerFactorImpact: await buildPowerFactor(fp, evit, multa),
+    loadCurve: loadCurveData.curve,
+    loadStats: loadCurveData.stats,
     hourlyConsumption: buildHourlyConsumption(kwh),
     powerFactorFinancial: buildPowerFactorFinancial(FP_AVOIDED, FP_FINES),
     invoicePrediction: buildInvoicePrediction(realKwh, projKwh),
@@ -164,30 +267,34 @@ export function buildStrategicInitialState(): StrategicDashboardState {
 
 // ─── Simulate Refresh ─────────────────────────────────────────────────────────
 
-export function simulateStrategicRefresh(
+export async function simulateStrategicRefresh(
   prev: StrategicDashboardState,
-): StrategicDashboardState {
+): Promise<StrategicDashboardState> {
   const occ = Math.round(280 + Math.random() * 80);
-  const kwh = Math.round(500 + Math.random() * 150);
-  const fp = 0.89 + Math.random() * 0.11;
-  const fpOk = fp >= 0.92;
-  const evit = fpOk ? Math.round(900 + Math.random() * 400) : 0;
-  const multa = fpOk ? 0 : Math.round(200 + Math.random() * 600);
-  const loadData = BASE_LOAD.map((v) => Math.round(v * (0.88 + Math.random() * 0.24)));
   const realKwh = Math.round(10000 + Math.random() * 2500);
   const projKwh = Math.round(realKwh * 1.6 + Math.random() * 1000);
   const fatura = Math.round(projKwh * 1.01);
 
-  const newAvoided = [...prev.powerFactorFinancial.avoidedHistory.slice(1), evit || Math.round(800 + Math.random() * 400)];
+  const [energyIntensity, fp, loadCurveData] = await Promise.all([
+    buildEnergyIntensity(occ),
+    fetchCurrentFP(),
+    buildLoadCurve()
+  ]);
+
+  const kwh = energyIntensity.kwh;
+  const fpOk = fp >= 0.92;
+  const evit = fpOk ? Math.round(900 + Math.random() * 400) : 0;
+  const multa = fpOk ? 0 : Math.round(200 + Math.random() * 600);
+
+  const newAvoided = [...prev.powerFactorFinancial.avoidedHistory.slice(1), evit];
   const newFines = [...prev.powerFactorFinancial.finesHistory.slice(1), multa];
-  const { curve, stats } = buildLoadCurve(loadData);
 
   return {
-    energyIntensity: buildEnergyIntensity(occ, kwh),
+    energyIntensity,
     invoiceForecast: buildInvoiceForecast(fatura),
-    powerFactorImpact: buildPowerFactor(fp, evit, multa),
-    loadCurve: curve,
-    loadStats: stats,
+    powerFactorImpact: await buildPowerFactor(fp, evit, multa),
+    loadCurve: loadCurveData.curve,
+    loadStats: loadCurveData.stats,
     hourlyConsumption: buildHourlyConsumption(kwh),
     powerFactorFinancial: buildPowerFactorFinancial(newAvoided, newFines),
     invoicePrediction: buildInvoicePrediction(realKwh, projKwh),

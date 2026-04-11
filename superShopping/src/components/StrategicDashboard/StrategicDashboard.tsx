@@ -12,6 +12,11 @@ import styles from './StrategicDashboard.module.css';
 
 export function StrategicDashboard() {
   const { state, refresh } = useStrategicDashboard();
+
+  if (!state) {
+    return <div className={styles.loading}>Carregando indicadores estratégicos...</div>;
+  }
+
   const {
     energyIntensity,
     invoiceForecast,
