@@ -167,10 +167,26 @@ async function buildLoadCurve(): Promise<{ curve: LoadCurvePoint[]; stats: LoadC
       hourlySums[timeStr] = (hourlySums[timeStr] || 0) + (res.avg_power_kw || 0);
     });
 
-    const values = Object.values(hourlySums);
-    const peak = values.length > 0 ? Math.max(...values) : 0;
-    const avg = values.length > 0 ? values.reduce((a, b) => a + b, 0) / values.length : 0;
-    const min = values.length > 0 ? Math.min(...values) : 0;
+    const entries = Object.entries(hourlySums).map(([h, val]) => ({ h: parseInt(h, 10), val }));
+    let peak = 0, peakHour = 0;
+    let min = Infinity, minHour = 0;
+    let sum = 0;
+
+    entries.forEach(e => {
+      sum += e.val;
+      if (e.val > peak) { peak = e.val; peakHour = e.h; }
+      if (e.val < min) { min = e.val; minHour = e.h; }
+    });
+
+    if (min === Infinity) min = 0;
+
+    const avg = entries.length > 0 ? sum / entries.length : 0;
+    const maxHourRecorded = entries.length > 0 ? Math.max(...entries.map(e => e.h)) : 0;
+
+    const peakTime = entries.length > 0 ? `às ${String(peakHour).padStart(2, '0')}h00` : '--';
+    const minTime = entries.length > 0 ? `às ${String(minHour).padStart(2, '0')}h00` : '--';
+    const avgTime = entries.length > 0 ? `das 00h às ${String(maxHourRecorded).padStart(2, '0')}h` : '--';
+
     const curve: LoadCurvePoint[] = LOAD_HOURS.map((hour, i) => ({
       hour,
       value: hourlySums[i] || 0,
@@ -182,13 +198,16 @@ async function buildLoadCurve(): Promise<{ curve: LoadCurvePoint[]; stats: LoadC
         peak,
         avg,
         min,
+        peakTime,
+        avgTime,
+        minTime,
       },
     };
   } catch (error) {
     console.error("Erro ao buscar perfil horário na Curva de Carga:", error);
     return {
       curve: LOAD_HOURS.map(hour => ({ hour, value: 0 })),
-      stats: { peak: 0, avg: 0, min: 0 },
+      stats: { peak: 0, avg: 0, min: 0, peakTime: '--', avgTime: '--', minTime: '--' },
     };
   }
 }

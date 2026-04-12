@@ -133,17 +133,17 @@ export function LoadCurveCard({ curve, stats }: LoadCurveCardProps) {
         <div className={styles.statCard}>
           <div className={styles.statLabel}>Pico</div>
           <div className={styles.statValue}>{BR(stats.peak)} kW</div>
-          <div className={styles.statSub}>às 12h15</div>
+          <div className={styles.statSub}>{stats.peakTime}</div>
         </div>
         <div className={styles.statCard}>
           <div className={styles.statLabel}>Média</div>
           <div className={styles.statValue}>{BR(stats.avg)} kW</div>
-          <div className={styles.statSub}>das 06h–22h</div>
+          <div className={styles.statSub}>{stats.avgTime}</div>
         </div>
         <div className={styles.statCard}>
           <div className={styles.statLabel}>Mínima</div>
           <div className={styles.statValue}>{BR(stats.min)} kW</div>
-          <div className={styles.statSub}>às 03h30</div>
+          <div className={styles.statSub}>{stats.minTime}</div>
         </div>
       </div>
     </div>
