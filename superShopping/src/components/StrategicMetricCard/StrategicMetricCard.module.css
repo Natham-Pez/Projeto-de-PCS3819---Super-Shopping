@@ -6,6 +6,13 @@
   background: var(--color-background-primary);
   border-radius: var(--border-radius-md);
   padding: 14px 16px;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.mcard:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
 }
 
 .infoContainer {
@@ -56,4 +63,46 @@
   font-size: 10px;
   color: var(--color-text-secondary);
   overflow-wrap: break-word;
+}
+
+/* Modal Panorama styles */
+.modalPanorama {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.modalLabel {
+  font-size: 16px;
+  color: var(--color-text-secondary);
+  line-height: 1.4;
+}
+.modalValue {
+  font-size: 38px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+.modalSub {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+}
+.modalProjBar {
+  height: 16px;
+  border-radius: 99px;
+  overflow: hidden;
+  display: flex;
+  margin: 12px 0 6px;
+}
+.modalProjBar>div {
+  height: 100%;
+}
+.modalProjLabels {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+.modalBadgeWrap {
+  margin-top: 12px;
 }
