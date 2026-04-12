@@ -1,12 +1,68 @@
 .mcard {
   background: var(--color-background-primary);
   border-radius: var(--border-radius-md);
-  padding: 14px 16px;
+  padding: 14px 24px 14px 16px;
   display: grid;
   grid-row: span 5;
   grid-template-rows: subgrid;
+  grid-template-columns: minmax(0, 1fr);
   align-items: center;
+  min-width: 0;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
+
+.mcard:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+}
+
+.mcard > * {
+  min-width: 0;
+}
+
+.modalPanorama {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.modalLabel {
+  font-size: 16px;
+  color: var(--color-text-secondary);
+  line-height: 1.4;
+}
+.modalValue {
+  font-size: 38px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+.modalMeterSection {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+.modalRange {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  font-weight: 500;
+}
+.modalBarWrap {
+  height: 14px;
+  background: var(--color-border-tertiary, #eee);
+  border-radius: 99px;
+  overflow: hidden;
+}
+.modalBarFill {
+  height: 100%;
+  border-radius: 99px;
+}
+.modalBadgeWrap {
+  margin-top: 12px;
+}
+
 
 .label {
   font-size: 12px;
@@ -14,12 +70,18 @@
   border-color: var(--color-border-tertiary);
   margin-bottom: 2px;
   letter-spacing: 0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .value {
   font-size: 22px;
   font-weight: 500;
   color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .barWrap {
