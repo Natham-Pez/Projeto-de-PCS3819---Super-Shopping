@@ -175,8 +175,6 @@ async function buildLoadCurve(): Promise<{ curve: LoadCurvePoint[]; stats: LoadC
       hour,
       value: hourlySums[i] || 0,
     }));
-    console.log(LOAD_HOURS)
-    console.log(hourlySums)
 
     return {
       curve,
