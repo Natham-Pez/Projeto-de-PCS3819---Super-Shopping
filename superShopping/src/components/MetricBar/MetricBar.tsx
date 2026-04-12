@@ -23,18 +23,16 @@ export function MetricBar({ metric }: MetricBarProps) {
     <div className={styles.mcard}>
       <div className={styles.label}>{label}</div>
       <div className={styles.value}>{displayValue}</div>
-      <div className={styles.barSection}>
-        <div className={styles.barWrap}>
-          <div
-            className={styles.barFill}
-            style={{ width: `${barPercent}%`, background: barColor }}
-          />
-        </div>
-        <div className={styles.rangeRow}>
-          <span className={styles.rangeEdge}>{rangeMin}</span>
-          <span>{rangeLabel}</span>
-          <span className={styles.rangeEdge}>{rangeMax}</span>
-        </div>
+      <div className={styles.barWrap}>
+        <div
+          className={styles.barFill}
+          style={{ width: `${barPercent}%`, background: barColor }}
+        />
+      </div>
+      <div className={styles.rangeRow}>
+        <span className={styles.rangeEdge}>{rangeMin}</span>
+        <span>{rangeLabel}</span>
+        <span className={styles.rangeEdge}>{rangeMax}</span>
       </div>
       <div className={styles.badgeRow}>
         <Badge variant={badgeVariant}>{badgeText}</Badge>
