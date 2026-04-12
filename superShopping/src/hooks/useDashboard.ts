@@ -4,16 +4,23 @@ import type { DashboardState } from '../types/dashboard';
 
 export function useDashboard() {
   const [state, setState] = useState<DashboardState | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    buildInitialState().then(setState);
+    setIsLoading(true);
+    buildInitialState().then(data => {
+      setState(data);
+      setIsLoading(false);
+    });
   }, []);
 
   const refresh = useCallback(async () => {
     if (!state) return;
+    setIsLoading(true);
     const newState = await simulateRefresh(state);
     setState(newState);
+    setIsLoading(false);
   }, [state]);
 
-  return { state, refresh };
+  return { state, isLoading, refresh };
 }

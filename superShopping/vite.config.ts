@@ -6,6 +6,9 @@ export default defineConfig({
   plugins: [react()],
   server: {
     host: true,
+    port: 5173,
+    strictPort: true, 
+    allowedHosts: true,
     proxy: {
       '/analytics': {
         target: 'http://143.107.102.8:8090',
