@@ -74,7 +74,7 @@ async function buildPowerFactor(): Promise<MetricBarItem> {
     const data = await response.json();
     const results = data.results || [];
     console.log(results)
-    const fpRaw = results.length > 0 
+    const fpRaw = results.length > 0
       ? Math.min(...results.map((res: any) => res.avg_power_factor || 0))
       : 0;
     const fp = parseFloat(fpRaw.toFixed(2));
@@ -137,7 +137,7 @@ async function buildDemand(prev: DemandData): Promise<DemandData> {
     });
 
     const history = prev.labels.map(label => parseFloat((groups[label] || 0).toFixed(2)));
-    
+
     const limit = 200;
     const percent = Math.round((dem / limit) * 100);
 
@@ -180,6 +180,48 @@ const INITIAL_EQUIPMENTS: Equipment[] = [
   { id: 'ac1', name: 'Ar-condicionado — Sala A', status: 'alert', statusLabel: 'alerta', timeLabel: 'ciclos anômalos' },
 ];
 
+async function buildEquipments(): Promise<Equipment[]> {
+  const now = new Date();
+  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const offset = startOfDay.getTimezoneOffset() * 60000;
+  const from_time = new Date(startOfDay.getTime() - offset).toISOString().split('.')[0];
+  const channel = 'lab';
+
+  const url = `/analytics/${channel}/electrical_health?from_time=${from_time}`;
+  let labEquipments: Equipment[] = [];
+
+  try {
+    const response = await fetch(url);
+    const data = await response.json();
+    if (data.results) {
+      labEquipments = data.results.map((res: any) => {
+        const v = res.avg_voltage || 0;
+        let status: 'on' | 'off' | 'alert' = 'on';
+        let statusLabel = v ? 'ligado' : 'desligado';
+        let timeLabel = `${v.toFixed(1)}V (FP ${res.avg_power_factor ? res.avg_power_factor.toFixed(2) : '-'})`;
+
+        if (v < 10) {
+          status = 'off';
+          statusLabel = 'sem tensão';
+        } else if (v < 110 || v > 140) {
+          status = 'alert';
+          statusLabel = 'alerta tensão';
+        }
+
+        const name = res.sensor === 'fase1' ? 'Laboratório — Fase 1' :
+          res.sensor === 'fase2' ? 'Laboratório — Fase 2' :
+            res.sensor === 'fase3' ? 'Laboratório — Fase 3' : `Laboratório — ${res.sensor}`;
+
+        return { id: res.sensor, name, status, statusLabel, timeLabel };
+      });
+    }
+  } catch (error) {
+    console.error("Erro ao buscar equipamentos do laboratório:", error);
+  }
+
+  return [...INITIAL_EQUIPMENTS, ...labEquipments];
+}
+
 export async function buildInitialState(): Promise<DashboardState> {
   const demLabels = generateTimeLabels(12, 150_000);
   const histLabels = generateTimeLabels(13, 300_000);
@@ -202,7 +244,7 @@ export async function buildInitialState(): Promise<DashboardState> {
       temperature: [21.8, 22.1, 22.4, 22.9, 23.1, 23.3, 23.5, 23.8, 23.6, 23.4, 23.2, 23.4, 23.4],
       occupancy: [12, 18, 24, 31, 38, 42, 45, 50, 48, 47, 44, 47, 47],
     },
-    equipments: INITIAL_EQUIPMENTS,
+    equipments: await buildEquipments(),
     lastUpdate: new Date(),
   };
 }
@@ -219,7 +261,7 @@ export async function simulateRefresh(prev: DashboardState): Promise<DashboardSt
     powerFactor: await buildPowerFactor(),
     demand: await buildDemand(prev.demand),
     history: buildHistory(temp, occ, prev.history),
-    equipments: prev.equipments,
+    equipments: await buildEquipments(),
     lastUpdate: new Date(),
   };
 }
