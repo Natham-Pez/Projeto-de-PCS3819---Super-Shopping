@@ -8,6 +8,11 @@
   padding: 14px 16px;
   cursor: pointer;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
+  min-width: 0;
+}
+
+.mcard > * {
+  min-width: 0;
 }
 
 .mcard:hover {
@@ -23,19 +28,35 @@
   font-size: 22px;
   font-weight: 500;
   color: var(--color-text-primary);
-  overflow-wrap: break-word;
+  min-width: 0;
+}
+
+.infoContainer > * {
+  min-width: 0;
 }
 
 .label {
   font-size: 12px;
   color: var(--color-text-secondary);
   margin-bottom: 5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.value {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .sub {
   font-size: 12px;
   color: var(--color-text-secondary);
   margin-top: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .badgeRow {
@@ -62,7 +83,12 @@
   justify-content: space-between;
   font-size: 10px;
   color: var(--color-text-secondary);
-  overflow-wrap: break-word;
+}
+
+.projLabels > span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Modal Panorama styles */

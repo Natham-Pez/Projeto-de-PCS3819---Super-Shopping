@@ -24,13 +24,13 @@
 }
 
 .statsRow {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
   gap: 12px;
   margin-top: 12px;
 }
 
 .statCard {
-  flex: 1;
   background: var(--color-background-secondary);
   border-radius: var(--border-radius-md);
   padding: 10px 12px;
