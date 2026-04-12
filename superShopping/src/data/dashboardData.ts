@@ -124,7 +124,7 @@ async function buildDemand(prev: DemandData): Promise<DemandData> {
     const data = await response.json();
     const measurements = data.measurements || [];
 
-    const demRaw = measurements.slice(0, 3).reduce((sum: number, m: any) => sum + (m.active_power || 0), 0);
+    const demRaw = measurements.length > 0 ? (measurements[measurements.length - 1].active_power || 0) : 0;
     const dem = parseFloat(demRaw.toFixed(2));
 
     // Agrupa por HH:mm para bater com as labels existentes
@@ -132,7 +132,7 @@ async function buildDemand(prev: DemandData): Promise<DemandData> {
     measurements.forEach((m: any) => {
       const d = new Date(m.timestamp);
       const t = formatTime(d);
-      groups[t] = (groups[t] || 0) + (m.active_power || 0);
+      groups[t] = m.active_power || 0;
     });
 
     const history = prev.labels.map(label => parseFloat((groups[label] || 0).toFixed(2)));
