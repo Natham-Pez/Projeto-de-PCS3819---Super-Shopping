@@ -31,9 +31,9 @@ export function MetricBar({ metric }: MetricBarProps) {
           />
         </div>
         <div className={styles.rangeRow}>
-          <span>{rangeMin}</span>
+          <span className={styles.rangeEdge}>{rangeMin}</span>
           <span>{rangeLabel}</span>
-          <span>{rangeMax}</span>
+          <span className={styles.rangeEdge}>{rangeMax}</span>
         </div>
       </div>
       <div className={styles.badgeRow}>

@@ -2,6 +2,8 @@
   background: var(--color-background-primary);
   border-radius: var(--border-radius-md);
   padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
 }
 
 .label {
@@ -19,7 +21,7 @@
 }
 
 .barSection {
-  margin-top: 8px;
+  margin-top: auto;
 }
 
 .barWrap {
@@ -42,6 +44,16 @@
   justify-content: space-between;
   font-size: 11px;
   color: var(--color-text-secondary);
+}
+
+@media (max-width: 600px) {
+  .rangeEdge {
+    display: none;
+  }
+
+  .rangeRow {
+    justify-content: center;
+  }
 }
 
 .badgeRow {
