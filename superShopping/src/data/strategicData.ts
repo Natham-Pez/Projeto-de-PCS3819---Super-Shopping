@@ -15,7 +15,7 @@ import type {
 const BR = (n: number) => n.toLocaleString('pt-BR');
 
 // const BASE_LOAD = [38, 35, 42, 55, 90, 140, 192, 185, 170, 196, 188, 160];
-const LOAD_HOURS = ['00h', '02h', '04h', '06h', '08h', '10h', '12h', '14h', '16h', '18h', '20h', '22h'];
+const LOAD_HOURS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0') + 'h');
 const FP_MONTHS = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun'];
 const FP_AVOIDED = [820, 960, 1040, 880, 1120, 1000];
 const FP_FINES = [0, 120, 0, 220, 0, 0];
@@ -149,59 +149,45 @@ async function buildLoadCurve(): Promise<{ curve: LoadCurvePoint[]; stats: LoadC
   const now = new Date();
   const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-  const offset = now.getTimezoneOffset() * 60000;
-  const to_time = new Date(now.getTime() - offset).toISOString().split('.')[0];
+  const offset = startOfDay.getTimezoneOffset() * 60000;
   const from_time = new Date(startOfDay.getTime() - offset).toISOString().split('.')[0];
 
   const channel = 'lab';
-  const url = `/${channel}?&from_time=${from_time}&to_time=${to_time}`;
-  console.log('http://143.107.102.8:8090' + url);
+  const url = `/analytics/${channel}/hourly_profile?from_time=${from_time}`;
 
   try {
     const response = await fetch(url);
     const data = await response.json();
-    const measurements = data.measurements || [];
+    const results = data.results || [];
 
-    // Agrupa medições por timestamp e soma a potência ativa das fases
-    const momentSums: Record<string, number> = {};
-    measurements.forEach((m: any) => {
-      const t = m.timestamp;
-      momentSums[t] = (momentSums[t] || 0) + (m.active_power || 0);
+    // Agrupa (soma) a potência (avg_power_kw) das fases por cada hora real
+    const hourlySums: Record<number, number> = {};
+    results.forEach((res: any) => {
+      const timeStr = parseInt(res.hour);
+      hourlySums[timeStr] = (hourlySums[timeStr] || 0) + (res.avg_power_kw || 0);
     });
 
-    const values = Object.values(momentSums);
+    const values = Object.values(hourlySums);
     const peak = values.length > 0 ? Math.max(...values) : 0;
     const avg = values.length > 0 ? values.reduce((a, b) => a + b, 0) / values.length : 0;
     const min = values.length > 0 ? Math.min(...values) : 0;
-
-    // Mapeia os dados para os 12 buckets de 2 horas (00h, 02h... 22h)
-    const buckets: number[] = Array(12).fill(0);
-    const counts: number[] = Array(12).fill(0);
-
-    Object.entries(momentSums).forEach(([ts, val]) => {
-      const hour = new Date(ts).getHours();
-      const bucketIdx = Math.floor(hour / 2);
-      if (bucketIdx >= 0 && bucketIdx < 12) {
-        buckets[bucketIdx] += val;
-        counts[bucketIdx]++;
-      }
-    });
-
     const curve: LoadCurvePoint[] = LOAD_HOURS.map((hour, i) => ({
       hour,
-      value: counts[i] > 0 ? parseFloat((buckets[i] / counts[i]).toFixed(1)) : 0,
+      value: hourlySums[i] || 0,
     }));
+    console.log(LOAD_HOURS)
+    console.log(hourlySums)
 
     return {
       curve,
       stats: {
-        peak: Math.round(peak),
-        avg: Math.round(avg),
-        min: Math.round(min),
+        peak,
+        avg,
+        min,
       },
     };
   } catch (error) {
-    console.error("Erro ao buscar curva de carga:", error);
+    console.error("Erro ao buscar perfil horário na Curva de Carga:", error);
     return {
       curve: LOAD_HOURS.map(hour => ({ hour, value: 0 })),
       stats: { peak: 0, avg: 0, min: 0 },
@@ -210,8 +196,8 @@ async function buildLoadCurve(): Promise<{ curve: LoadCurvePoint[]; stats: LoadC
 }
 
 function buildHourlyConsumption(totalKwh: number, pontaKwh: number): HourlyConsumption {
-  const ponta = Math.round(pontaKwh);
-  const fora = Math.max(0, Math.round(totalKwh - ponta));
+  const ponta = pontaKwh;
+  const fora = Math.max(0, totalKwh - ponta);
 
   const peakPct = totalKwh > 0 ? Math.round((ponta / totalKwh) * 100) : 0;
   const offPeakPct = totalKwh > 0 ? 100 - peakPct : 0;
@@ -221,10 +207,10 @@ function buildHourlyConsumption(totalKwh: number, pontaKwh: number): HourlyConsu
     offPeak: fora,
     peakPct,
     offPeakPct,
-    activePeak: Math.round(ponta * 0.96),
-    reactivePeak: Math.round(ponta * 0.04 * 10),
-    activeOffPeak: Math.round(fora * 0.97),
-    reactiveOffPeak: Math.round(fora * 0.03 * 10),
+    activePeak: ponta * 0.96,
+    reactivePeak: ponta * 0.04 * 10,
+    activeOffPeak: fora * 0.97,
+    reactiveOffPeak: fora * 0.03 * 10,
   };
 }
 

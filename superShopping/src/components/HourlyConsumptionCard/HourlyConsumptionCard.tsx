@@ -1,7 +1,7 @@
 import type { HourlyConsumption } from '../../types/strategic';
 import styles from './HourlyConsumptionCard.module.css';
 
-const BR = (n: number) => n.toLocaleString('pt-BR');
+const BR = (n: number) => n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 interface HourlyConsumptionCardProps {
   data: HourlyConsumption;
