@@ -14,7 +14,7 @@ import type {
 
 const BR = (n: number) => n.toLocaleString('pt-BR');
 
-const BASE_LOAD = [38, 35, 42, 55, 90, 140, 192, 185, 170, 196, 188, 160];
+// const BASE_LOAD = [38, 35, 42, 55, 90, 140, 192, 185, 170, 196, 188, 160];
 const LOAD_HOURS = ['00h', '02h', '04h', '06h', '08h', '10h', '12h', '14h', '16h', '18h', '20h', '22h'];
 const FP_MONTHS = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun'];
 const FP_AVOIDED = [820, 960, 1040, 880, 1120, 1000];
@@ -22,30 +22,64 @@ const FP_FINES = [0, 120, 0, 220, 0, 0];
 
 // ─── Builders ─────────────────────────────────────────────────────────────────
 
-async function buildEnergyIntensity(occ: number): Promise<EnergyIntensityMetric> {
+async function fetchDailyConsumption(): Promise<number> {
   const now = new Date();
   const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  
-  const offset = now.getTimezoneOffset() * 60000;
-  const to_time = new Date(now.getTime() - offset).toISOString().split('.')[0];
-  const from_time = new Date(startOfDay.getTime() - offset).toISOString().split('.')[0];
-  
-  const channel = 'lab';
-  const url = `/analytics/${channel}/consumption?&from_time=${from_time}&to_time=${to_time}`;
 
-  let kwh = 574;
+  const offset = startOfDay.getTimezoneOffset() * 60000;
+  const from_time = new Date(startOfDay.getTime() - offset).toISOString().split('.')[0];
+
+  const channel = 'lab';
+  const url = `/analytics/${channel}/consumption?from_time=${from_time}`;
+
   try {
     const response = await fetch(url);
     const data = await response.json();
-    
+
     const results = data.results || [];
     if (results.length > 0) {
-      kwh = results.reduce((sum: number, res: any) => sum + (res.total_kwh || 0), 0);
+      return results.reduce((sum: number, res: any) => sum + (res.total_kwh || 0), 0);
     }
   } catch (error) {
-    console.error("Erro ao buscar consumo para intensidade energética:", error);
+    console.error("Erro ao buscar consumo diário:", error);
+  }
+  return 0;
+}
+
+async function fetchPontaConsumption(): Promise<number> {
+  const now = new Date();
+  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  // Ponta é de 17:00 às 22:00
+  const pontaStart = new Date(startOfDay.getTime() + 17 * 60 * 60 * 1000);
+  const pontaEnd = new Date(startOfDay.getTime() + 22 * 60 * 60 * 1000);
+
+  if (now < pontaStart) {
+    return 0; // Se o horário de ponta ainda não começou, é 0.
   }
 
+  const offset = startOfDay.getTimezoneOffset() * 60000;
+  const from_time = new Date(pontaStart.getTime() - offset).toISOString().split('.')[0];
+  const to_time = new Date(pontaEnd.getTime() - offset).toISOString().split('.')[0];
+
+  const channel = 'lab';
+  const url = `/analytics/${channel}/consumption?from_time=${from_time}&to_time=${to_time}`;
+
+  try {
+    const response = await fetch(url);
+    const data = await response.json();
+
+    const results = data.results || [];
+    if (results.length > 0) {
+      return results.reduce((sum: number, res: any) => sum + (res.total_kwh || 0), 0);
+    }
+  } catch (error) {
+    console.error("Erro ao buscar consumo ponta:", error);
+  }
+  return 0;
+}
+
+function buildEnergyIntensity(occ: number, kwh: number): EnergyIntensityMetric {
   const ie = kwh / occ;
   const iePrev = (kwh * 1.06) / occ;
   const delta = Math.round((1 - ie / iePrev) * 100);
@@ -114,11 +148,11 @@ async function buildPowerFactor(fp: number, evit: number, multa: number): Promis
 async function buildLoadCurve(): Promise<{ curve: LoadCurvePoint[]; stats: LoadCurveStats }> {
   const now = new Date();
   const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  
+
   const offset = now.getTimezoneOffset() * 60000;
   const to_time = new Date(now.getTime() - offset).toISOString().split('.')[0];
   const from_time = new Date(startOfDay.getTime() - offset).toISOString().split('.')[0];
-  
+
   const channel = 'lab';
   const url = `/${channel}?&from_time=${from_time}&to_time=${to_time}`;
   console.log('http://143.107.102.8:8090' + url);
@@ -175,14 +209,18 @@ async function buildLoadCurve(): Promise<{ curve: LoadCurvePoint[]; stats: LoadC
   }
 }
 
-function buildHourlyConsumption(kwh: number): HourlyConsumption {
-  const ponta = Math.round(kwh * 0.32);
-  const fora = kwh - ponta;
+function buildHourlyConsumption(totalKwh: number, pontaKwh: number): HourlyConsumption {
+  const ponta = Math.round(pontaKwh);
+  const fora = Math.max(0, Math.round(totalKwh - ponta));
+
+  const peakPct = totalKwh > 0 ? Math.round((ponta / totalKwh) * 100) : 0;
+  const offPeakPct = totalKwh > 0 ? 100 - peakPct : 0;
+
   return {
     peak: ponta,
     offPeak: fora,
-    peakPct: Math.round((ponta / kwh) * 100),
-    offPeakPct: Math.round((fora / kwh) * 100),
+    peakPct,
+    offPeakPct,
     activePeak: Math.round(ponta * 0.96),
     reactivePeak: Math.round(ponta * 0.04 * 10),
     activeOffPeak: Math.round(fora * 0.97),
@@ -240,25 +278,25 @@ export async function buildStrategicInitialState(): Promise<StrategicDashboardSt
   const occ = 312;
   const realKwh = 11240;
   const projKwh = 18100;
-  
-  const [energyIntensity, fp, loadCurveData] = await Promise.all([
-    buildEnergyIntensity(occ),
+
+  const [kwh, pontaKwh, fp, loadCurveData] = await Promise.all([
+    fetchDailyConsumption(),
+    fetchPontaConsumption(),
     fetchCurrentFP(),
     buildLoadCurve()
   ]);
-  
-  const kwh = energyIntensity.kwh;
+
   const fpOk = fp >= 0.92;
   const evit = fpOk ? 1120 : 0;
   const multa = fpOk ? 0 : 450;
 
   return {
-    energyIntensity,
+    energyIntensity: buildEnergyIntensity(occ, kwh),
     invoiceForecast: buildInvoiceForecast(18240),
     powerFactorImpact: await buildPowerFactor(fp, evit, multa),
     loadCurve: loadCurveData.curve,
     loadStats: loadCurveData.stats,
-    hourlyConsumption: buildHourlyConsumption(kwh),
+    hourlyConsumption: buildHourlyConsumption(kwh, pontaKwh),
     powerFactorFinancial: buildPowerFactorFinancial(FP_AVOIDED, FP_FINES),
     invoicePrediction: buildInvoicePrediction(realKwh, projKwh),
     lastUpdate: new Date(),
@@ -275,13 +313,13 @@ export async function simulateStrategicRefresh(
   const projKwh = Math.round(realKwh * 1.6 + Math.random() * 1000);
   const fatura = Math.round(projKwh * 1.01);
 
-  const [energyIntensity, fp, loadCurveData] = await Promise.all([
-    buildEnergyIntensity(occ),
+  const [kwh, pontaKwh, fp, loadCurveData] = await Promise.all([
+    fetchDailyConsumption(),
+    fetchPontaConsumption(),
     fetchCurrentFP(),
     buildLoadCurve()
   ]);
 
-  const kwh = energyIntensity.kwh;
   const fpOk = fp >= 0.92;
   const evit = fpOk ? Math.round(900 + Math.random() * 400) : 0;
   const multa = fpOk ? 0 : Math.round(200 + Math.random() * 600);
@@ -290,12 +328,12 @@ export async function simulateStrategicRefresh(
   const newFines = [...prev.powerFactorFinancial.finesHistory.slice(1), multa];
 
   return {
-    energyIntensity,
+    energyIntensity: buildEnergyIntensity(occ, kwh),
     invoiceForecast: buildInvoiceForecast(fatura),
     powerFactorImpact: await buildPowerFactor(fp, evit, multa),
     loadCurve: loadCurveData.curve,
     loadStats: loadCurveData.stats,
-    hourlyConsumption: buildHourlyConsumption(kwh),
+    hourlyConsumption: buildHourlyConsumption(kwh, pontaKwh),
     powerFactorFinancial: buildPowerFactorFinancial(newAvoided, newFines),
     invoicePrediction: buildInvoicePrediction(realKwh, projKwh),
     lastUpdate: new Date(),

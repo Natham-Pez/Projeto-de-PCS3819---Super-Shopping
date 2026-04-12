@@ -73,7 +73,6 @@ async function buildPowerFactor(): Promise<MetricBarItem> {
     const response = await fetch(url);
     const data = await response.json();
     const results = data.results || [];
-    console.log(results)
     const fpRaw = results.length > 0
       ? Math.min(...results.map((res: any) => res.avg_power_factor || 0))
       : 0;
