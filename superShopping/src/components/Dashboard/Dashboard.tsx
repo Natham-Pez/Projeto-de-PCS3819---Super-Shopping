@@ -3,10 +3,16 @@ import { DemandCard } from '../DemandCard/DemandCard';
 import { EquipmentList } from '../EquipmentList/EquipmentList';
 import { HistoryChart } from '../HistoryChart/HistoryChart';
 import { useDashboard } from '../../hooks/useDashboard';
+import { LoadingSpinner } from '../LoadingSpinner/LoadingSpinner';
 import styles from './Dashboard.module.css';
 
 export function Dashboard() {
-  const { state, refresh } = useDashboard();
+  const { state, isLoading, refresh } = useDashboard();
+
+  if (isLoading || !state) {
+    return <LoadingSpinner message="Carregando dados do dashboard..." />;
+  }
+
   const { temperature, occupancy, powerFactor, demand, history, equipments, lastUpdate } = state;
 
   const formattedTime = lastUpdate.toLocaleTimeString('pt-BR');

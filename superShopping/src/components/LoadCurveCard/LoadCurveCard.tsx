@@ -18,6 +18,8 @@ const GRID_COLOR = '#736ce9ff';
 const TICK_COLOR = '#040135ff';
 const DEMAND_LIMIT = 200;
 
+const BR = (n: number) => n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
 interface LoadCurveCardProps {
   curve: LoadCurvePoint[];
   stats: LoadCurveStats;
@@ -48,14 +50,6 @@ export function LoadCurveCard({ curve, stats }: LoadCurveCardProps) {
             backgroundColor: 'rgba(55,138,221,0.08)',
             tension: 0.4,
           },
-          {
-            data: Array(labels.length).fill(DEMAND_LIMIT),
-            borderColor: '#E24B4A',
-            borderWidth: 1.5,
-            borderDash: [6, 4],
-            pointRadius: 0,
-            fill: false,
-          },
         ],
       },
       options: {
@@ -65,7 +59,7 @@ export function LoadCurveCard({ curve, stats }: LoadCurveCardProps) {
           legend: { display: false },
           tooltip: {
             callbacks: {
-              label: (c) => (c.datasetIndex === 0 ? `${c.parsed.y} kW` : ''),
+              label: (c) => (c.datasetIndex === 0 ? `${BR(c.parsed.y)} kW` : ''),
             },
             filter: (item) => item.datasetIndex === 0,
           },
@@ -73,20 +67,51 @@ export function LoadCurveCard({ curve, stats }: LoadCurveCardProps) {
         scales: {
           x: {
             grid: { color: GRID_COLOR },
-            ticks: { color: TICK_COLOR, font: { size: 11 } },
+            ticks: {
+              color: TICK_COLOR,
+              font: { size: 11 },
+              callback: function (val, index) {
+                return index % 2 === 0 ? this.getLabelForValue(val as number) : '';
+              }
+            },
           },
           y: {
-            min: 0,
-            max: 230,
+            display: true,
+            position: 'left',
             grid: { color: GRID_COLOR },
             ticks: {
               color: TICK_COLOR,
               font: { size: 11 },
+              maxTicksLimit: 5,
               callback: (v) => `${v}kW`,
             },
           },
         },
       },
+      plugins: [
+        {
+          id: 'dynamicLimitLine',
+          afterDraw(chart) {
+            const { ctx, chartArea, scales } = chart;
+            const yAxis = scales.y;
+            if (!yAxis) return;
+
+            if (DEMAND_LIMIT >= yAxis.min && DEMAND_LIMIT <= yAxis.max) {
+              const yPixel = yAxis.getPixelForValue(DEMAND_LIMIT);
+
+              ctx.save();
+              ctx.beginPath();
+              ctx.moveTo(chartArea.left, yPixel);
+              ctx.lineTo(chartArea.right, yPixel);
+              ctx.lineWidth = 1.5;
+              ctx.strokeStyle = '#E24B4A';
+              ctx.setLineDash([6, 4]);
+              ctx.stroke();
+              ctx.restore();
+            }
+          }
+        }
+      ]
     });
 
     return () => {
@@ -124,18 +149,18 @@ export function LoadCurveCard({ curve, stats }: LoadCurveCardProps) {
       <div className={styles.statsRow}>
         <div className={styles.statCard}>
           <div className={styles.statLabel}>Pico</div>
-          <div className={styles.statValue}>{stats.peak} kW</div>
-          <div className={styles.statSub}>às 12h15</div>
+          <div className={styles.statValue}>{BR(stats.peak)} kW</div>
+          <div className={styles.statSub}>{stats.peakTime}</div>
         </div>
         <div className={styles.statCard}>
           <div className={styles.statLabel}>Média</div>
-          <div className={styles.statValue}>{stats.avg} kW</div>
-          <div className={styles.statSub}>das 06h–22h</div>
+          <div className={styles.statValue}>{BR(stats.avg)} kW</div>
+          <div className={styles.statSub}>{stats.avgTime}</div>
         </div>
         <div className={styles.statCard}>
           <div className={styles.statLabel}>Mínima</div>
-          <div className={styles.statValue}>{stats.min} kW</div>
-          <div className={styles.statSub}>às 03h30</div>
+          <div className={styles.statValue}>{BR(stats.min)} kW</div>
+          <div className={styles.statSub}>{stats.minTime}</div>
         </div>
       </div>
     </div>

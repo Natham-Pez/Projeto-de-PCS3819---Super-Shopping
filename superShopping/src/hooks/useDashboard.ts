@@ -1,13 +1,26 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { buildInitialState, simulateRefresh } from '../data/dashboardData';
 import type { DashboardState } from '../types/dashboard';
 
 export function useDashboard() {
-  const [state, setState] = useState<DashboardState>(buildInitialState);
+  const [state, setState] = useState<DashboardState | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const refresh = useCallback(() => {
-    setState((prev) => simulateRefresh(prev));
+  useEffect(() => {
+    setIsLoading(true);
+    buildInitialState().then(data => {
+      setState(data);
+      setIsLoading(false);
+    });
   }, []);
 
-  return { state, refresh };
+  const refresh = useCallback(async () => {
+    if (!state) return;
+    setIsLoading(true);
+    const newState = await simulateRefresh(state);
+    setState(newState);
+    setIsLoading(false);
+  }, [state]);
+
+  return { state, isLoading, refresh };
 }

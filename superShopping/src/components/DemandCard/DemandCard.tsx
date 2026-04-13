@@ -39,7 +39,8 @@ export function DemandCard({ demand }: DemandCardProps) {
             data: history,
             borderColor: '#BA7517',
             borderWidth: 1.5,
-            pointRadius: 0,
+            pointRadius: 3,
+            pointBackgroundColor: '#BA7517',
             fill: true,
             backgroundColor: 'rgba(255, 151, 4, 0.3)',
             tension: 0.35,
@@ -55,7 +56,12 @@ export function DemandCard({ demand }: DemandCardProps) {
         },
         scales: {
           x: { display: false },
-          y: { display: false, min: 100, max: 220 },
+          y: { 
+            display: true, 
+            position: 'left',
+            grid: { color: 'rgba(128, 128, 128, 0.15)' },
+            ticks: { color: '#888888', font: { size: 11 }, maxTicksLimit: 5 }
+          },
         },
       },
     });

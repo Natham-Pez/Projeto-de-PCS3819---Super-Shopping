@@ -33,6 +33,9 @@ export interface LoadCurveStats {
   peak: number;
   avg: number;
   min: number;
+  peakTime: string;
+  avgTime: string;
+  minTime: string;
 }
 
 export interface HourlyConsumption {

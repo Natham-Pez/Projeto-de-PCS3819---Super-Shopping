@@ -8,10 +8,16 @@ import { LoadCurveCard } from '../LoadCurveCard/LoadCurveCard';
 import { HourlyConsumptionCard } from '../HourlyConsumptionCard/HourlyConsumptionCard';
 import { PowerFactorImpactCard as PowerFactorImpactChartCard } from '../PowerFactorImpactCard/PowerFactorImpactCard';
 import { InvoicePredictionCard } from '../InvoicePredictionCard/InvoicePredictionCard';
+import { LoadingSpinner } from '../LoadingSpinner/LoadingSpinner';
 import styles from './StrategicDashboard.module.css';
 
 export function StrategicDashboard() {
-  const { state, refresh } = useStrategicDashboard();
+  const { state, isLoading, refresh } = useStrategicDashboard();
+
+  if (isLoading || !state) {
+    return <LoadingSpinner message="Carregando indicadores estratégicos..." />;
+  }
+
   const {
     energyIntensity,
     invoiceForecast,

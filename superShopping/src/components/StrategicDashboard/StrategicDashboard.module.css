@@ -11,6 +11,12 @@
   gap: 12px;
 }
 
+@media (max-width: 800px) {
+  .metricsRow {
+    grid-template-columns: 1fr;
+  }
+}
+
 .bottomRow {
   display: flex;
   flex-direction: column;
