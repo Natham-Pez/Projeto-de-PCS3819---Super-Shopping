@@ -50,14 +50,6 @@ export function LoadCurveCard({ curve, stats }: LoadCurveCardProps) {
             backgroundColor: 'rgba(55,138,221,0.08)',
             tension: 0.4,
           },
-          {
-            data: Array(labels.length).fill(DEMAND_LIMIT),
-            borderColor: '#E24B4A',
-            borderWidth: 1.5,
-            borderDash: [6, 4],
-            pointRadius: 0,
-            fill: false,
-          },
         ],
       },
       options: {
@@ -75,26 +67,51 @@ export function LoadCurveCard({ curve, stats }: LoadCurveCardProps) {
         scales: {
           x: {
             grid: { color: GRID_COLOR },
-            ticks: { 
-              color: TICK_COLOR, 
+            ticks: {
+              color: TICK_COLOR,
               font: { size: 11 },
-              callback: function(val, index) {
+              callback: function (val, index) {
                 return index % 2 === 0 ? this.getLabelForValue(val as number) : '';
               }
             },
           },
           y: {
-            min: 0,
-            max: 230,
+            display: true,
+            position: 'left',
             grid: { color: GRID_COLOR },
             ticks: {
               color: TICK_COLOR,
               font: { size: 11 },
+              maxTicksLimit: 5,
               callback: (v) => `${v}kW`,
             },
           },
         },
       },
+      plugins: [
+        {
+          id: 'dynamicLimitLine',
+          afterDraw(chart) {
+            const { ctx, chartArea, scales } = chart;
+            const yAxis = scales.y;
+            if (!yAxis) return;
+
+            if (DEMAND_LIMIT >= yAxis.min && DEMAND_LIMIT <= yAxis.max) {
+              const yPixel = yAxis.getPixelForValue(DEMAND_LIMIT);
+
+              ctx.save();
+              ctx.beginPath();
+              ctx.moveTo(chartArea.left, yPixel);
+              ctx.lineTo(chartArea.right, yPixel);
+              ctx.lineWidth = 1.5;
+              ctx.strokeStyle = '#E24B4A';
+              ctx.setLineDash([6, 4]);
+              ctx.stroke();
+              ctx.restore();
+            }
+          }
+        }
+      ]
     });
 
     return () => {
