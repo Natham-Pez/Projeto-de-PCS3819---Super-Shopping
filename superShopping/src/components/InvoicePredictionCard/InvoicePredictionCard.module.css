@@ -10,12 +10,21 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 12px;
+  gap: 12px;
+}
+
+.header > :last-child {
+  flex-shrink: 0;
 }
 
 .cardTitle {
   font-size: 13px;
   font-weight: 500;
   color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
 }
 
 .chartWrap {

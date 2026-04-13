@@ -74,7 +74,7 @@ async function buildPowerFactor(): Promise<MetricBarItem> {
     const data = await response.json();
     const results = data.results || [];
     const fpRaw = results.length > 0
-      ? Math.min(...results.map((res: any) => res.avg_power_factor || 0))
+      ? results.reduce((sum: number, res: any) => sum + (res.avg_power_factor || 0), 0) / results.length
       : 0;
     const fp = parseFloat(fpRaw.toFixed(2));
 
