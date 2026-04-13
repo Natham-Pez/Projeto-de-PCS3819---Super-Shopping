@@ -60,11 +60,11 @@ function buildOccupancy(occ: number): MetricBarItem {
 }
 async function buildPowerFactor(): Promise<MetricBarItem> {
   const now = new Date();
-  const fiveSecondsAgo = new Date(now.getTime() - (10 * 1000));
+  const thirtySecondsAgo = new Date(now.getTime() - (30 * 1000));
 
   const offset = now.getTimezoneOffset() * 60000;
   const to_time = new Date(now.getTime() - offset).toISOString().split('.')[0];
-  const from_time = new Date(fiveSecondsAgo.getTime() - offset).toISOString().split('.')[0];
+  const from_time = new Date(thirtySecondsAgo.getTime() - offset).toISOString().split('.')[0];
   const channel = 'lab'
 
   const url = `/analytics/${channel}/electrical_health?&from_time=${from_time}&to_time=${to_time}`;
